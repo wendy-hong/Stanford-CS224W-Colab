@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import networkx as nx
 import random
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 
 
 def graph_to_edge_list(G):
@@ -81,6 +83,30 @@ def create_node_emb(num_node=34, embedding_dim=16):
     return emb
 
 
+def visualize_emb(emb):
+    X = emb.weight.data.numpy()
+    # sklearn.decomposition.PCA(n_components=None, copy=True, whiten=False)
+    pca = PCA(n_components=2)
+    # newX = pca.fit_transform(X), where newX is the data after PCA
+    components = pca.fit_transform(X)
+    plt.figure(figsize=(6, 6))
+    club1_x = []
+    club1_y = []
+    club2_x = []
+    club2_y = []
+    for node in G.nodes(data=True):
+        if node[1]['club'] == 'Mr. Hi':
+            club1_x.append(components[node[0]][0])
+            club1_y.append(components[node[0]][1])
+        else:
+            club2_x.append(components[node[0]][0])
+            club2_y.append(components[node[0]][1])
+    plt.scatter(club1_x, club1_y, color="red", label="Mr. Hi")
+    plt.scatter(club2_x, club2_y, color="blue", label="Officer")
+    plt.legend()
+    plt.show()
+
+
 def accuracy(pred, label):
     # TODO: Implement the accuracy function. This function takes the
     # pred tensor (the resulting tensor after sigmoid) and the label
@@ -95,7 +121,7 @@ def accuracy(pred, label):
     pred_label = pred.ge(0.5)
     num = 0
     for i in range(pred.shape[0]):
-        if pred_label == label:
+        if pred_label[i] == label[i]:
             num += 1
     accu = num / pred.shape[0]
     accu = round(accu, 4)
@@ -132,7 +158,7 @@ def train(emb, loss_fn, sigmoid, train_label, train_edge):
         loss = loss_fn(sigmoid_res, train_label)
         loss.backward()
         optimizer.step()
-        # print("Epoch:", i, "Loss:", loss.item(), "Acc:", accuracy(sigmoid_res, train_label).item())
+        print("Epoch:", i, "Loss:", loss.item(), "Acc:", accuracy(sigmoid_res, train_label))
         #########################################
 
 
@@ -162,3 +188,4 @@ train_edge = torch.cat([pos_edge_index, neg_edge_index], dim=1)
 print(train_edge.shape)
 
 train(emb, loss_fn, sigmoid, train_label, train_edge)
+visualize_emb(emb)
